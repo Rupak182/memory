@@ -15,7 +15,8 @@ app.get("/db-test", async (c) => {
     return c.json({ status: "success", version: SHARED_VERSION, users: allUsers });
   } catch (error) {
     const err = error as Error;
-    return c.json({ status: "error", message: "Failed to query database", error: err.message }, 500);
+    console.error("Failed to query database:", err);
+    return c.json({ status: "error", message: "Failed to query database" }, 500);
   }
 });
 
