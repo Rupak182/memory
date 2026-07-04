@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "workspaces": ["packages/*"],
   "scripts": {
-    "dev": "bun --cwd packages/server dev",
+    "dev": "bun --cwd packages/server dev --persist-to=../../local-db",
     "typegen": "bun --cwd packages/server cf-typegen",
     "db:generate": "bun --cwd packages/database db:generate",
     "db:push": "bun --cwd packages/database db:push",
-    "db:migrate:local": "bun --cwd packages/server wrangler d1 migrations apply memory-db --local",
+    "db:migrate:local": "bun --cwd packages/server wrangler d1 migrations apply memory-db --local --persist-to=../../local-db",
     "db:migrate:remote": "bun --cwd packages/server wrangler d1 migrations apply memory-db --remote",
     "lint": "eslint .",
     "test": "bun --cwd packages/database test"

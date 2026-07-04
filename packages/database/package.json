@@ -11,7 +11,7 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "test": "bun run scripts/create-test-db.ts && bun test && bun run scripts/destroy-test-db.ts"
+    "test": "bun run scripts/create-test-db.ts && bun test; status=$?; bun run scripts/destroy-test-db.ts; exit $status"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2"
