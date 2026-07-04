@@ -1,38 +1,26 @@
 {
-  // "$schema": "node_modules/wrangler/config-schema.json",
   "name": "server",
   "main": "src/index.ts",
-  "compatibility_date": "2026-07-04"
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
-  // "observability": {
-  //   "enabled": true,
-  //   "head_sampling_rate": 1
-  // }
+  "compatibility_date": "2026-07-04",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "memory-db",
+      "database_id": "ec832b33-f71b-46ef-bad6-723606194433",
+      "migrations_dir": "../database/src/migrations"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "vectorize": [
+    {
+      "binding": "CHUNKS_INDEX",
+      "index_name": "chunks-index"
+    },
+    {
+      "binding": "MEMORIES_INDEX",
+      "index_name": "memories-index"
+    }
+  ]
 }

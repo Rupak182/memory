@@ -2,10 +2,19 @@
   "name": "memory",
   "version": "1.0.0",
   "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "bun --cwd packages/server dev",
+    "typegen": "bun --cwd packages/server cf-typegen",
+    "db:generate": "bun --cwd packages/database db:generate",
+    "db:migrate:local": "bun --cwd packages/server wrangler d1 migrations apply memory-db --local",
+    "db:migrate:remote": "bun --cwd packages/server wrangler d1 migrations apply memory-db --remote",
+    "lint": "eslint ."
+  },
   "devDependencies": {
-    "typescript-eslint": "^8.62.1",
-     "@eslint/js": "^10.0.1",
+    "@eslint/js": "^10.0.1",
     "eslint": "^10.6.0",
-    "globals": "^17.7.0"
+    "globals": "^17.7.0",
+    "jiti": "^2.7.0",
+    "typescript-eslint": "^8.62.1"
   }
 }
