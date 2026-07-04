@@ -25,7 +25,7 @@ export const documents = sqliteTable("documents", {
   status: text("status").default("unknown").notNull(), // queued, chunking, done, failed
   tokenCount: integer("token_count"),
   wordCount: integer("word_count"),
-  metadata: text("metadata"), // JSON-serialized metadata object (source, pages, authors)
+  metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(), // JSON-serialized metadata object (source, pages, authors)
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (table) => [
@@ -62,7 +62,7 @@ export const memories = sqliteTable("memories", {
   isStatic: integer("is_static", { mode: "boolean" }).default(false).notNull(), // Non-temporal profile facts
   forgetAfter: integer("forget_after", { mode: "timestamp" }),
   forgetReason: text("forget_reason"),
-  metadata: text("metadata"), // JSON-serialized metadata (confidence, tags, overrides)
+  metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(), // JSON-serialized metadata (confidence, tags, overrides)
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (table) => [
