@@ -9,9 +9,14 @@ app.get("/", (c) => {
 });
 
 app.get("/db-test", async (c) => {
-  const db = getDb(c.env.DB);
-  const allUsers = await db.select().from(users);
-  return c.json({ status: "success", version: SHARED_VERSION, users: allUsers });
+  try {
+    const db = getDb(c.env.DB);
+    const allUsers = await db.select({ id: users.id }).from(users).limit(10);
+    return c.json({ status: "success", version: SHARED_VERSION, users: allUsers });
+  } catch (error) {
+    const err = error as Error;
+    return c.json({ status: "error", message: "Failed to query database", error: err.message }, 500);
+  }
 });
 
 export default app;
