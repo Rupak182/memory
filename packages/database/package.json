@@ -8,6 +8,11 @@
       "import": "./src/index.ts"
     }
   },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "test": "bun run scripts/create-test-db.ts && bun test && bun run scripts/destroy-test-db.ts"
+  },
   "dependencies": {
     "drizzle-orm": "^0.45.2"
   },
