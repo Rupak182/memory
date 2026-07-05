@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -67,7 +67,7 @@ export const memories = sqliteTable("memories", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (table) => [
   index("mem_latest_search_idx").on(table.containerTag, table.isLatest, table.isForgotten),
-  index("mem_parent_idx").on(table.parentMemoryId),
+  uniqueIndex("mem_parent_unique_idx").on(table.parentMemoryId),
   index("mem_root_idx").on(table.rootMemoryId),
 ]);
 

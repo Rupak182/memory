@@ -73,7 +73,8 @@ ${text}
     console.warn("generateObject failed, falling back to raw generateText:", error);
     const { text: rawText } = await generateText({
       model,
-      prompt: `${systemPrompt}\n\n${userPrompt}\n\nReturn ONLY a valid JSON object matching the schema. Do not wrap it in markdown code fences or add explanations.`,
+      system: systemPrompt,
+      prompt: `${userPrompt}\n\nReturn ONLY a valid JSON object matching the schema. Do not wrap it in markdown code fences or add explanations.`,
     });
     
     try {
