@@ -1,6 +1,9 @@
 import { Hono } from "hono";
 import { getDb, users, getEmbedding, getEmbeddings, queryVector } from "@memory/database";
 import { SHARED_VERSION } from "@memory/shared";
+import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
+import { extractFacts } from "./extractor";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -76,7 +79,7 @@ app.get("/test-vectorize", async (c) => {
   } catch (error) {
     const err = error as Error;
     console.error("Verification failed:", err);
-    return c.json({ status: "error", message: err.message }, 500);
+    return c.json({ status: "error", message: "Verification failed" }, 500);
   } finally {
     console.log("   [Step 5] Cleaning up generated test vectors...");
     await index.deleteByIds(ids).catch((e) => {
@@ -84,6 +87,36 @@ app.get("/test-vectorize", async (c) => {
     });
   }
 });
+
+const TestExtractorRequestSchema = z.object({
+  text: z.string().min(1, "text field is required in request body"),
+  candidates: z.array(
+    z.object({
+      id: z.string(),
+      memory: z.string(),
+    })
+  ).optional(),
+});
+
+app.post(
+  "/test-extractor",
+  zValidator("json", TestExtractorRequestSchema),
+  async (c) => {
+    try {
+      const ai = c.env.AI;
+      const body = c.req.valid("json");
+
+      console.log("   [Step 1] Running fact extractor LLM...");
+      const result = await extractFacts(ai, body.text, body.candidates || []);
+
+      return c.json({ status: "success", result });
+    } catch (error) {
+      const err = error as Error;
+      console.error("Extraction verification failed:", err);
+      return c.json({ status: "error", message: "Extraction failed" }, 500);
+    }
+  }
+);
 
 export default app;
 
