@@ -4,6 +4,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 
 export * from "./schema";
 export * from "./queries";
+export * from "./vector";
 
 export const getDb = (binding: D1Database) => {
   return drizzle(binding, { schema });

@@ -16,11 +16,13 @@
   "vectorize": [
     {
       "binding": "CHUNKS_INDEX",
-      "index_name": "chunks-index"
+      "index_name": "chunks-index",
+      "remote": true
     },
     {
       "binding": "MEMORIES_INDEX",
-      "index_name": "memories-index"
+      "index_name": "memories-index",
+      "remote": true
     }
   ]
 }
