@@ -138,8 +138,8 @@ async function runVerification() {
     console.log(`Fact 1 Ingested successfully. Memory IDs: ${memoryIds1.join(", ")}`);
 
     // Wait a short moment for Vectorize index replication
-    console.log("Waiting 10 seconds for Vectorize index replication of Fact 1...");
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+    console.log("Waiting 25 seconds for Vectorize index replication of Fact 1...");
+    await new Promise((resolve) => setTimeout(resolve, 25000));
 
     // ── STEP 2: Ingest Fact 2 (Should link to Fact 1) ─────────────────────────
     console.log("Ingesting Fact 2: Acme Corp is based in San Francisco...");
@@ -163,8 +163,8 @@ async function runVerification() {
     const memoryIds2 = await waitForDoc(json2.documentId);
     console.log(`Fact 2 Ingested successfully. Memory IDs: ${memoryIds2.join(", ")}`);
 
-    console.log("Waiting 10 seconds for Vectorize index replication of Fact 2...");
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+    console.log("Waiting 25 seconds for Vectorize index replication of Fact 2...");
+    await new Promise((resolve) => setTimeout(resolve, 25000));
 
     // ── STEP 3: Ingest Fact 3 (Should link to Fact 2) ─────────────────────────
     console.log("Ingesting Fact 3: San Francisco is in its rainy season...");
@@ -192,12 +192,13 @@ async function runVerification() {
     await new Promise((resolve) => setTimeout(resolve, 15000));
 
     // ── STEP 4: Query Chat Endpoint with maxDepth = 1 ─────────────────────────
-    console.log("\nQuerying /v3/chat with maxDepth = 1 (Should find Acme Corp but NOT weather)...");
+    const userMsg1 = "Where does Alex work?";
+    console.log(`\nQuerying /v3/chat with maxDepth = 1 (Should find Acme Corp but NOT weather)...`);
     const chatRes1 = await fetch("http://localhost:8888/v3/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: [{ role: "user", content: "Where does Alex work?" }],
+        messages: [{ role: "user", content: userMsg1 }],
         userId,
         containerTag,
         maxDepth: 1,
@@ -208,6 +209,7 @@ async function runVerification() {
       throw new Error(`Chat request failed: ${chatRes1.status} - ${txt}`);
     }
     const chatJson1 = (await chatRes1.json()) as ChatResponse;
+    console.log(`\nUser Message: "${userMsg1}"`);
     console.log("--- Context Injected (maxDepth = 1) ---");
     console.log(chatJson1.context);
     console.log("--- Response (maxDepth = 1) ---");
@@ -219,12 +221,13 @@ async function runVerification() {
     }
 
     // ── STEP 5: Query Chat Endpoint with maxDepth = 2 ─────────────────────────
-    console.log("\nQuerying /v3/chat with maxDepth = 2 (Should traverse Acme Corp -> San Francisco -> Weather)...");
+    const userMsg2 = "Tell me about the weather where Alex's company is based.";
+    console.log(`\nQuerying /v3/chat with maxDepth = 2 (Should traverse Acme Corp -> San Francisco -> Weather)...`);
     const chatRes2 = await fetch("http://localhost:8888/v3/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: [{ role: "user", content: "Tell me about the weather where Alex's company is based." }],
+        messages: [{ role: "user", content: userMsg2 }],
         userId,
         containerTag,
         maxDepth: 2,
@@ -235,6 +238,7 @@ async function runVerification() {
       throw new Error(`Chat request failed: ${chatRes2.status} - ${txt}`);
     }
     const chatJson2 = (await chatRes2.json()) as ChatResponse;
+    console.log(`\nUser Message: "${userMsg2}"`);
     console.log("--- Context Injected (maxDepth = 2) ---");
     console.log(chatJson2.context);
     console.log("--- Response (maxDepth = 2) ---");
