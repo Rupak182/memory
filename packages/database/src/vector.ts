@@ -106,11 +106,13 @@ export async function deleteVectors(index: VectorizeDB, ids: string[]): Promise<
 export async function queryVector(
   index: VectorizeDB,
   vector: number[],
-  topK: number = 5
+  topK: number = 5,
+  filter?: Record<string, string | number | boolean>
 ): Promise<{ id: string; score: number; metadata?: Record<string, VectorizeVectorMetadata> }[]> {
   const result = await index.query(vector, {
     topK,
     returnMetadata: "all",
+    filter,
   });
   
   return result.matches.map((match) => ({

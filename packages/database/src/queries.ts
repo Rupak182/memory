@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, desc } from "drizzle-orm";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { memories, memoryDocumentSources, documents, users } from "./schema";
 import * as schema from "./schema";
@@ -213,3 +213,128 @@ export async function getMemoryById(db: AnyDb, id: string) {
   const [result] = await db.select().from(memories).where(eq(memories.id, id));
   return result ?? null;
 }
+
+export interface GraphMemory {
+  id: string;
+  memory: string;
+  isStatic: boolean;
+  depth: number;
+}
+
+/**
+ * Traverses memoryRelations graph bidirectionally up to maxDepth hops starting from seed IDs.
+ */
+export async function getRelatedMemories(
+  db: AnyDb,
+  seeds: string[],
+  userId: string,
+  containerTag: string,
+  maxDepth = 2
+): Promise<GraphMemory[]> {
+  if (seeds.length === 0) return [];
+
+  // Validate seed IDs to prevent SQL injection issues when interpolating in CTE raw SQL
+  const validatedSeeds = seeds.filter((s) => typeof s === "string" && s.startsWith("mem_"));
+  if (validatedSeeds.length === 0) return [];
+
+  const seedChunks = validatedSeeds.map((s) => sql`${s}`);
+  const seedsListSql = sql.join(seedChunks, sql.raw(", "));
+
+  const query = sql`
+    WITH RECURSIVE 
+    edges(source, target) AS (
+      SELECT m.id, j.key
+      FROM memories m, json_each(m.memory_relations) j
+      WHERE m.user_id = ${userId} 
+        AND m.container_tag = ${containerTag}
+        AND m.is_latest = 1 
+        AND m.is_forgotten = 0
+    ),
+    graph_cte(id, depth) AS (
+      SELECT id, 0 AS depth
+      FROM memories
+      WHERE id IN (${seedsListSql}) 
+        AND user_id = ${userId} 
+        AND container_tag = ${containerTag}
+        AND is_latest = 1 
+        AND is_forgotten = 0
+      
+      UNION
+      
+      SELECT e.target AS id, c.depth + 1 AS depth
+      FROM graph_cte c
+      JOIN edges e ON e.source = c.id
+      WHERE c.depth < ${maxDepth}
+      
+      UNION
+      
+      SELECT e.source AS id, c.depth + 1 AS depth
+      FROM graph_cte c
+      JOIN edges e ON e.target = c.id
+      WHERE c.depth < ${maxDepth}
+    )
+    SELECT g.id, m.memory, m.is_static, MIN(g.depth) AS depth
+    FROM graph_cte g
+    JOIN memories m ON m.id = g.id
+    WHERE m.user_id = ${userId}
+      AND m.container_tag = ${containerTag}
+      AND m.is_latest = 1 
+      AND m.is_forgotten = 0
+    GROUP BY g.id
+    ORDER BY depth ASC;
+  `;
+
+  const rows = await db.all<{ id: string; memory: string; is_static: number; depth: number }>(query);
+  return rows.map((r) => ({
+    id: r.id,
+    memory: r.memory,
+    isStatic: r.is_static === 1,
+    depth: r.depth,
+  }));
+}
+
+/**
+ * Retrieves the static profile facts and recent dynamic memory entries for a user profile context.
+ */
+export async function getProfileMemories(
+  db: AnyDb,
+  userId: string,
+  containerTag: string
+): Promise<schema.Memory[]> {
+  const [staticMemories, dynamicMemories] = await Promise.all([
+    db
+      .select()
+      .from(memories)
+      .where(
+        and(
+          eq(memories.userId, userId),
+          eq(memories.containerTag, containerTag),
+          eq(memories.isStatic, true),
+          eq(memories.isLatest, true),
+          eq(memories.isForgotten, false)
+        )
+      )
+      .limit(20),
+    db
+      .select()
+      .from(memories)
+      .where(
+        and(
+          eq(memories.userId, userId),
+          eq(memories.containerTag, containerTag),
+          eq(memories.isStatic, false),
+          eq(memories.isLatest, true),
+          eq(memories.isForgotten, false)
+        )
+      )
+      .orderBy(desc(memories.createdAt))
+      .limit(5)
+  ]);
+
+  const allMemoriesMap = new Map<string, schema.Memory>();
+  for (const m of [...staticMemories, ...dynamicMemories]) {
+    allMemoriesMap.set(m.id, m);
+  }
+  return Array.from(allMemoriesMap.values());
+}
+

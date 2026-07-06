@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createWorkersAI } from "workers-ai-provider";
-import { generateObject, generateText } from "ai";
+import { generateText } from "ai";
 import type { Ai } from "@cloudflare/workers-types";
 
 export interface CandidateMemory {
@@ -54,7 +54,9 @@ You must output a JSON object matching this schema:
       "targetId": "string" // optional, only if type is updates or extends
     }
   ]
-}`;
+}
+
+Return ONLY a valid JSON object matching the schema. Do not wrap it in markdown code fences or add explanations.`;
 
   const userPrompt = `Extract facts and relations from the following text chunk:
 """
@@ -62,33 +64,40 @@ ${text}
 """`;
 
   try {
-    const { object } = await generateObject({
-      model,
-      schema: FactExtractionSchema,
-      prompt: userPrompt,
-      system: systemPrompt,
-    });
-    return sanitizeFacts(object, candidates);
-  } catch (error) {
-    console.warn("generateObject failed, falling back to raw generateText:", error);
     const { text: rawText } = await generateText({
       model,
       system: systemPrompt,
-      prompt: `${userPrompt}\n\nReturn ONLY a valid JSON object matching the schema. Do not wrap it in markdown code fences or add explanations.`,
+      prompt: userPrompt,
     });
     
-    try {
-      let cleanText = rawText.trim();
-      if (cleanText.startsWith("```")) {
-        cleanText = cleanText.replace(/^```(?:json)?\n?/i, "");
-        cleanText = cleanText.replace(/\n?```$/, "");
-      }
-      const parsed = JSON.parse(cleanText.trim());
-      return sanitizeFacts(FactExtractionSchema.parse(parsed), candidates);
-    } catch (parseError) {
-      console.error("Failed to parse fallback JSON response:", rawText, parseError);
-      throw new Error(`Failed to extract facts due to JSON parse error: ${(parseError as Error).message}`, { cause: parseError });
+    let cleanText = rawText.trim();
+    if (cleanText.startsWith("```")) {
+      cleanText = cleanText.replace(/^```(?:json)?\n?/i, "");
+      cleanText = cleanText.replace(/\n?```$/, "");
     }
+    
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(cleanText.trim());
+    } catch (parseErr) {
+      // Fallback: extract the outermost JSON object if model returned conversational prose
+      const start = cleanText.indexOf("{");
+      const end = cleanText.lastIndexOf("}");
+      if (start !== -1 && end !== -1 && end > start) {
+        try {
+          parsed = JSON.parse(cleanText.slice(start, end + 1));
+        } catch {
+          throw parseErr; // Throw original parsing error if fallback parsing also fails
+        }
+      } else {
+        throw parseErr;
+      }
+    }
+
+    return sanitizeFacts(FactExtractionSchema.parse(parsed), candidates);
+  } catch (error) {
+    console.error("Failed to extract facts:", error);
+    throw new Error(`Failed to extract facts: ${(error as Error).message}`, { cause: error });
   }
 }
 

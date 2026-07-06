@@ -26,7 +26,7 @@ async function verify() {
   
   wrangler.stdout.on("data", async (data) => {
     const output = data.toString();
-    console.log(`[Wrangler] ${output.trim()}`);
+    process.stdout.write(data);
     
     if (!isReady) {
       // eslint-disable-next-line no-control-regex
@@ -101,7 +101,7 @@ async function verify() {
   });
   
   wrangler.stderr.on("data", (data) => {
-    console.error(`[Wrangler Error] ${data.toString().trim()}`);
+    process.stderr.write(data);
   });
   
   wrangler.on("close", (code) => {

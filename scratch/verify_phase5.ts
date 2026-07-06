@@ -9,12 +9,13 @@ import { join } from "path";
 
 const serverPath = join(import.meta.dir, "..", "packages", "server");
 
-interface IngestResponse {
+interface DocumentPollResponse {
   status: string;
-  documentId: string;
-  chunks: number;
-  memories: number;
-  memoryIds: string[];
+  document: {
+    id: string;
+    status: string;
+    memoryIds: string[];
+  };
 }
 
 async function main() {
@@ -49,7 +50,7 @@ async function main() {
 
   wrangler.stdout.on("data", async (data) => {
     const output = data.toString();
-    process.stdout.write(`[Wrangler] ${output}`);
+    process.stdout.write(data);
 
     if (!isReady) {
       // eslint-disable-next-line no-control-regex
@@ -85,7 +86,7 @@ async function main() {
             return;
           }
 
-          const json = await res.json() as IngestResponse;
+          const json = await res.json() as { status: string; documentId: string; message?: string };
           console.log("Ingestion Response:", JSON.stringify(json, null, 2));
 
           // Assertions
@@ -95,21 +96,40 @@ async function main() {
           if (!json.documentId.startsWith("doc_")) {
             throw new Error(`documentId should start with "doc_", got "${json.documentId}"`);
           }
-          if (json.chunks < 1) {
-            throw new Error(`Expected at least 1 chunk, got ${json.chunks}`);
+
+          // Poll the document status endpoint until done
+          console.log(`Polling document status for ${json.documentId}...`);
+          let processedDoc: DocumentPollResponse["document"] | null = null;
+          const maxAttempts = 15;
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const pollRes = await fetch(`http://localhost:${port}/v3/documents/${json.documentId}?userId=test_user&containerTag=test_phase5`);
+            if (pollRes.ok) {
+              const pollJson = await pollRes.json() as DocumentPollResponse;
+              if (pollJson.status === "success" && pollJson.document.status === "done") {
+                processedDoc = pollJson.document;
+                break;
+              } else if (pollJson.status === "success" && pollJson.document.status === "failed") {
+                throw new Error("Document processing failed on the server background worker.");
+              }
+            }
+            await new Promise((resolve) => setTimeout(resolve, 3000));
           }
-          if (json.memories < 1) {
-            throw new Error(`Expected at least 1 memory to be ingested, got ${json.memories}`);
+
+          if (!processedDoc) {
+            throw new Error("Timeout: Document was not processed within 45 seconds.");
           }
-          if (!Array.isArray(json.memoryIds) || json.memoryIds.some((id) => !id.startsWith("mem_"))) {
+
+          if (processedDoc.memoryIds.length < 1) {
+            throw new Error(`Expected at least 1 memory to be ingested, got ${processedDoc.memoryIds.length}`);
+          }
+          if (processedDoc.memoryIds.some((id: string) => !id.startsWith("mem_"))) {
             throw new Error("All memoryIds should start with 'mem_'");
           }
 
           console.log(`\n✅ Phase 5 E2E verification complete: SUCCESS`);
-          console.log(`   Document ID : ${json.documentId}`);
-          console.log(`   Chunks      : ${json.chunks}`);
-          console.log(`   Memories    : ${json.memories}`);
-          console.log(`   Memory IDs  : ${json.memoryIds.join(", ")}`);
+          console.log(`   Document ID : ${processedDoc.id}`);
+          console.log(`   Status      : ${processedDoc.status}`);
+          console.log(`   Memory IDs  : ${processedDoc.memoryIds.join(", ")}`);
 
           cleanExit(0);
         } catch (err) {
@@ -121,7 +141,7 @@ async function main() {
   });
 
   wrangler.stderr.on("data", (data) => {
-    process.stderr.write(`[Wrangler:err] ${data.toString()}`);
+    process.stderr.write(data);
   });
 
   wrangler.on("exit", (code) => {
