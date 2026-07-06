@@ -19,3 +19,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+### Third-Party Attribution
+This project implements and conforms to the API specification of Supermemory (https://supermemory.ai). The API specification and design concepts are based on Supermemory, which is Copyright (c) supermemoryai and licensed under the MIT License. All implementation code in this repository is original and licensed under the MIT License.
+
+
